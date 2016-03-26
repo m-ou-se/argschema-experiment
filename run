@@ -5,10 +5,18 @@ cloudabi-run ./test << EOF
 %TAG ! tag:nuxi.nl,2015:cloudabi/
 ---
 output: !fd stdout
-hello: !!int "100"
-world: [
-	!!int "999",
-	!!int "999",
-	!!int "999",
-]
+name: world
+origin:
+    x: !!int 20
+    y: !!int 5
+points:
+    a:
+        x: !!int 1
+        y: !!int 0
+    foo:
+        x: !!int 10
+        y: !!int 10
+    bar:
+        x: !!int 100
+        y: !!int 223
 EOF

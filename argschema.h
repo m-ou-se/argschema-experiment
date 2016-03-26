@@ -16,7 +16,7 @@
 	struct argdata_##name { \
 		_ARGSCHEMA_ITERATE(_ARGSCHEMA_STRUCT_A def) \
 	}; \
-	static inline int argdata_get_argschema_##name( \
+	static inline int argdata_get_argdata_##name( \
 		const argdata_t *ad, \
 		struct argdata_##name *result) { \
 		int error = 0; \
@@ -55,15 +55,24 @@
 	int name;
 #define _ARGSCHEMA_STRUCT_fd(name) \
 	int name;
+#define _ARGSCHEMA_STRUCT_str(name) \
+	struct { \
+		size_t size; \
+		const char *str; \
+	} name;
 #define _ARGSCHEMA_STRUCT_struct(type, name) \
 	struct argdata_##type name;
 #define _ARGSCHEMA_STRUCT_seq(type, name) \
-	size_t name##_size; \
-	_ARGSCHEMA_STRUCT(_ARGSCHEMA_UNWRAP type, *name)
+	struct { \
+		size_t size; \
+		_ARGSCHEMA_STRUCT(_ARGSCHEMA_UNWRAP type, *items) \
+	} name;
 #define _ARGSCHEMA_STRUCT_map(ktype, vtype, name) \
-	size_t name##_size; \
-	_ARGSCHEMA_STRUCT(_ARGSCHEMA_UNWRAP ktype, *name##_keys) \
-	_ARGSCHEMA_STRUCT(_ARGSCHEMA_UNWRAP vtype, *name##_vals)
+	struct { \
+		size_t size; \
+		_ARGSCHEMA_STRUCT(_ARGSCHEMA_UNWRAP ktype, *keys) \
+		_ARGSCHEMA_STRUCT(_ARGSCHEMA_UNWRAP vtype, *values) \
+	} name;
 
 #define _ARGSCHEMA_STRUCT(type, ...) _ARGSCHEMA_STRUCT2(type, __VA_ARGS__)
 #define _ARGSCHEMA_STRUCT2(type, ...) _ARGSCHEMA_STRUCT_##type(__VA_ARGS__)
@@ -92,6 +101,10 @@
 	_ARGSCHEMA_ASM_STRING_IF_NONEMPTY(#name)
 
 #define _ARGSCHEMA_ASM_fd(name) \
+	_ARGSCHEMA_ASM_INT(1) \
+	_ARGSCHEMA_ASM_STRING_IF_NONEMPTY(#name)
+
+#define _ARGSCHEMA_ASM_str(name) \
 	_ARGSCHEMA_ASM_INT(1) \
 	_ARGSCHEMA_ASM_STRING_IF_NONEMPTY(#name)
 
@@ -137,31 +150,33 @@
 	error = argdata_get_int(val, &result->name);
 #define _ARGSCHEMA_PARSE_fd(name) \
 	error = argdata_get_fd(val, &result->name);
+#define _ARGSCHEMA_PARSE_str(name) \
+	error = argdata_get_str(val, &result->name.str, &result->name.size);
 #define _ARGSCHEMA_PARSE_struct(type, name) \
-	error = argdata_get_argschema_##type(val, &result->name);
+	error = argdata_get_argdata_##type(val, &result->name);
 #define _ARGSCHEMA_PARSE_seq(type, name) \
-	error = argdata_get_seq_size(val, &result->name##_size); \
+	error = argdata_get_seq_size(val, &result->name.size); \
 	if (error) break; \
-	result->name = calloc(result->name##_size, sizeof(result->name[0])); \
+	result->name = calloc(result->name##_size, sizeof(result->name.items[0])); \
 	argdata_iterator_t j = argdata_seq_iterator(val); \
 	while (argdata_seq_iterator_next(&j)) { \
 		val = &j.value; \
-		_ARGSCHEMA_PARSE(_ARGSCHEMA_UNWRAP type, name[j.index]) \
+		_ARGSCHEMA_PARSE(_ARGSCHEMA_UNWRAP type, name.items[j.index]) \
 		if (error) break; \
 	} \
 	if (j.error) error = j.error;
 #define _ARGSCHEMA_PARSE_map(ktype, vtype, name) \
-	error = argdata_get_map_size(val, &result->name##_size); \
+	error = argdata_get_map_size(val, &result->name.size); \
 	if (error) break; \
-	result->name##_vals = calloc(result->name##_size, sizeof(result->name##_keys[0])); \
-	result->name##_keys = calloc(result->name##_size, sizeof(result->name##_vals[0])); \
+	result->name.keys = calloc(result->name.size, sizeof(result->name.keys[0])); \
+	result->name.values = calloc(result->name.size, sizeof(result->name.values[0])); \
 	argdata_iterator_t k = argdata_map_iterator(val); \
 	while (argdata_map_iterator_next(&k)) { \
 		val = &k.key; \
-		_ARGSCHEMA_PARSE(_ARGSCHEMA_UNWRAP ktype, name##_keys[k.index]) \
+		_ARGSCHEMA_PARSE(_ARGSCHEMA_UNWRAP ktype, name.keys[k.index]) \
 		if (error) break; \
 		val = &k.value; \
-		_ARGSCHEMA_PARSE(_ARGSCHEMA_UNWRAP vtype, name##_vals[k.index]) \
+		_ARGSCHEMA_PARSE(_ARGSCHEMA_UNWRAP vtype, name.values[k.index]) \
 		if (error) break; \
 	} \
 	if (k.error) error = k.error;
@@ -177,8 +192,15 @@
 // -------- USE --------
 
 #define ARGSCHEMA_USE(name) \
-	extern char _argschema_##name[]; \
-	void *volatile __argschema = _argschema_##name;
+	void argdata_main(const struct argdata_##name *); \
+	void program_main(const argdata_t *ad) { \
+		struct argdata_##name data = {}; \
+		extern char _argschema_##name[]; \
+		void *volatile __argschema = _argschema_##name; \
+		(void)__argschema; \
+		if (argdata_get_argdata_##name(ad, &data) != 0) exit(200); \
+		argdata_main(&data); \
+	}
 
 // -------- UTIL --------
 
