@@ -143,7 +143,7 @@
 	error = argdata_get_seq_size(val, &result->name##_size); \
 	if (error) break; \
 	result->name = calloc(result->name##_size, sizeof(result->name[0])); \
-	argdata_iterator_t j = argdata_seq_iterator(ad); \
+	argdata_iterator_t j = argdata_seq_iterator(val); \
 	while (argdata_seq_iterator_next(&j)) { \
 		val = &j.value; \
 		_ARGSCHEMA_PARSE(_ARGSCHEMA_UNWRAP type, name[j.index]) \
@@ -155,7 +155,7 @@
 	if (error) break; \
 	result->name##_vals = calloc(result->name##_size, sizeof(result->name##_keys[0])); \
 	result->name##_keys = calloc(result->name##_size, sizeof(result->name##_vals[0])); \
-	argdata_iterator_t k = argdata_map_iterator(ad); \
+	argdata_iterator_t k = argdata_map_iterator(val); \
 	while (argdata_map_iterator_next(&k)) { \
 		val = &k.key; \
 		_ARGSCHEMA_PARSE(_ARGSCHEMA_UNWRAP ktype, name##_keys[k.index]) \

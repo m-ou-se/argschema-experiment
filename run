@@ -1,10 +1,14 @@
 #!/bin/sh
+set -e
 cloudabi cc test.c -o test -Wall
 cloudabi-run ./test << EOF
 %TAG ! tag:nuxi.nl,2015:cloudabi/
 ---
 output: !fd stdout
 hello: !!int "100"
-hello: !!int "100"
-world: !!int "999"
+world: [
+	!!int "999",
+	!!int "999",
+	!!int "999",
+]
 EOF

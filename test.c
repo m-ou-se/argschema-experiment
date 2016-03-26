@@ -20,7 +20,7 @@
 ARGSCHEMA_DEF(config,
 	(fd, output)
 	(int, hello)
-	(int, world)
+	(seq, (int), world)
 )
 
 void program_main(const argdata_t *ad) {
@@ -28,12 +28,24 @@ void program_main(const argdata_t *ad) {
 
 	if (argdata_get_argschema_config(ad, &config) != 0) {
 		if (config.has_output) {
-			dprintf(config.output, "Invalid configuration.\n");
+			FILE *f = fdopen(config.output, "w");
+			fputs("Invalid configuration.\n", f);
+			fprintf(f, "Has world: %d\n", config.has_world);
+			fprintf(f, "World size: %zu\n", config.world_size);
+			fprintf(f, "World: %p\n", config.world);
+			for (size_t i = 0; i < config.world_size; ++i) {
+				fprintf(f, "World[%zu]: %d.\n", i, config.world[i]);
+			}
+			argdata_print_yaml(ad, f);
+			fclose(f);
 		}
 		exit(200);
 	}
 
-	dprintf(config.output, "Hello is %d and world is %d.\n", config.hello, config.world);
+	dprintf(config.output, "Hello: %d.\n", config.hello);
+	for (size_t i = 0; i < config.world_size; ++i) {
+		dprintf(config.output, "World: %d.\n", config.world[i]);
+	}
 
 	exit(0);
 }
