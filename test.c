@@ -1,5 +1,6 @@
 #include <argdata.h>
 #include <stdio.h>
+#include <sys/capsicum.h>
 
 #include "argschema.h"
 
@@ -10,8 +11,13 @@ ARGSCHEMA_DEF(point2d,
 
 ARGSCHEMA_DEF(config,
 	(fd, output)
+	(fd_cap, CAP_WRITE)
+	(doc, "The file descriptor used to write all log messages to.")
+
 	(str, name)
+
 	(struct, point2d, origin)
+
 	(map, (str), (struct, point2d), points)
 )
 
